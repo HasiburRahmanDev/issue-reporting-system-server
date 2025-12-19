@@ -135,8 +135,20 @@ async function run() {
 
     app.patch("/payment-success", async (req, res) => {
       const sessionId = req.query.session_id;
-      console.log("session id", sessionId);
-      res.send({ success: true });
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      console.log("session retrieve", session);
+      if (session.payment_status) {
+        const id = session.metadata.issueId;
+        const query = { _id: new ObjectId(id) };
+        const update = {
+          $set: {
+            paymentStatus: "paid",
+          },
+        };
+        const result = await issuesCollection.updateOne(query, update);
+        res.send(result);
+      }
+      res.send({ success: false });
     });
 
     // Send a ping to confirm a successful connection
