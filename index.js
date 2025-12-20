@@ -31,6 +31,7 @@ async function run() {
 
     const db = client.db("issue_report_db");
     const issuesCollection = db.collection("issues");
+    const paymentCollection = db.collection("payments");
 
     //issue api
 
@@ -146,7 +147,25 @@ async function run() {
           },
         };
         const result = await issuesCollection.updateOne(query, update);
-        res.send(result);
+
+        const payment = {
+          amount: session.amount_total / 100,
+          email: session.email,
+          issueId: session.metadata.issueId,
+          transactionId: session.payment_intent,
+          paymentStatus: session.payment_status,
+          paidAt: new Date(),
+          trackingId: "",
+        };
+
+        if (session.payment_status === "paid") {
+          const resultPayment = await paymentCollection.insertOne(payment);
+          res.send({
+            success: true,
+            modifyIssue: result,
+            paymentInfo: resultPayment,
+          });
+        }
       }
       res.send({ success: false });
     });
