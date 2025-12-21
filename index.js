@@ -21,6 +21,15 @@ function generateTrackingId() {
 app.use(express.json());
 app.use(cors());
 
+const verifyFBToken = (req, res, next) => {
+  console.log("headers in the middleware", req.headers.authorization);
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  next();
+};
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uxvhhti.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -198,9 +207,10 @@ async function run() {
     });
 
     // payment related apis
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", verifyFBToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
+      console.log("headers", req.headers);
       if (email) {
         query.email = email;
       }
