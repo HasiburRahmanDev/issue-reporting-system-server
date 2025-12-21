@@ -65,6 +65,26 @@ async function run() {
     const db = client.db("issue_report_db");
     const issuesCollection = db.collection("issues");
     const paymentCollection = db.collection("payments");
+    const userCollection = db.collection("users");
+    const staffCollection = db.collection("staffs");
+
+    // users relative apis
+
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      user.role = "user";
+      user.createdAt = new Date();
+      const email = user.email;
+
+      const userExist = await userCollection.findOne({ email });
+
+      if (userExist) {
+        return res.send({ message: "user exist" });
+      }
+
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
 
     //issue api
 
@@ -233,8 +253,57 @@ async function run() {
           return res.status(403).send({ message: "forbidded access" });
         }
       }
-      const cursor = paymentCollection.find(query);
+      const cursor = paymentCollection.find(query).sort({ paidAt: -1 });
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // staffs related apis
+
+    app.get("/staffs", async (req, res) => {
+      const query = {};
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+      const cursor = staffCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.post("/staffs", async (req, res) => {
+      const staff = req.body;
+      staff.status = "pending";
+      staff.createdAt = new Date();
+
+      const result = await staffCollection.insertOne(staff);
+      res.send(result);
+    });
+
+    app.patch("/staffs/:id", verifyFBToken, async (req, res) => {
+      const status = req.body.status;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: status,
+        },
+      };
+      const result = await staffCollection.updateOne(query, updatedDoc);
+
+      if (status === "approved") {
+        const email = req.body.email;
+        const userQuery = { email };
+        const updateUser = {
+          $set: {
+            role: "staff",
+          },
+        };
+        const userResult = await userCollection.updateOne(
+          userQuery,
+          updateUser
+        );
+      }
+
       res.send(result);
     });
 
