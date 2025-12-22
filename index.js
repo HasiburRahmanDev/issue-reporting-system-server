@@ -12,6 +12,7 @@ const crypto = require("crypto");
 const admin = require("firebase-admin");
 
 const serviceAccount = require("./issue-reporting-firebase-adminsdk.json");
+// const serviceAccount = require("./firebase-admin-key.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
